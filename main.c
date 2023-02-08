@@ -111,17 +111,17 @@ void print_cube(vec3* display_points) {
     for (int i = 0; i < N_DISPLAY; i++) {
         if (display_points[i].face) {
             if (display_points[i].face == 1) {
-                printf("\033[0;31m1 \033[0m");
+                printf("\033[0;31m11\033[0m");
             } else if (display_points[i].face == 2) {
-                printf("\033[0;32m2 \033[0m");
+                printf("\033[0;32m22\033[0m");
             } else if (display_points[i].face == 3) {
-                printf("\033[0;33m3 \033[0m");
+                printf("\033[0;33m33\033[0m");
             } else if (display_points[i].face == 4) {
-                printf("\033[0;34m4 \033[0m");
+                printf("\033[0;34m44\033[0m");
             } else if (display_points[i].face == 5) {
-                printf("\033[0;35m5 \033[0m");
+                printf("\033[0;35m55\033[0m");
             } else {
-                printf("\033[0;36m6 \033[0;0m");
+                printf("\033[0;36m66\033[0;0m");
             }
         } else {
             printf("  ");
@@ -175,7 +175,7 @@ int main(void) {
         clear_display_points(display_points);
 
         for (int i = 0; i < N; i++) {
-            polar_points[i].v3 += M_PI_4 / 3;
+            polar_points[i].v2 += M_PI_4 / 3;
             cartesian_points[i] = polar_to_cartesian(polar_points[i]);
         }
 
