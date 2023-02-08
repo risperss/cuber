@@ -2,6 +2,18 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
+
+const int S = 23;
+const int S_2 = S / 2;
+const int N = 6 * (S - 2) * (S - 2);
+
+const int ROWS_DISPLAY = 50;
+const int COLS_DISPLAY = 50;
+
+const int N_DISPLAY = ROWS_DISPLAY * COLS_DISPLAY;
+const int MID_ROW = ROWS_DISPLAY / 2;
+const int MID_COL = COLS_DISPLAY / 2;
 
 typedef struct {
     float v1;
@@ -15,10 +27,6 @@ void print_vec(vec3 p) {
 }
 
 vec3 cartesian_to_polar(vec3 p) {
-    if (!p.face) {
-        return p;
-    }
-
     float x = p.v1;
     float x_2 = x * x;
     float y = p.v2;
@@ -26,9 +34,7 @@ vec3 cartesian_to_polar(vec3 p) {
     float z = p.v3;
     float z_2 = z * z;
 
-    float r;
-    float theta;
-    float phi;
+    float r, theta, phi;
 
     r = sqrt(x_2 + y_2 + z_2);
 
@@ -36,7 +42,7 @@ vec3 cartesian_to_polar(vec3 p) {
         theta = atan(sqrt(x_2 + y_2) / z);
     } else if (z < 0) {
         theta = M_PI + atan(sqrt(x_2 + y_2) / z);
-    } else if (x * y != 0) {
+    } else if (x + y != 0) {
         theta = M_PI_2;
     } else {
         theta = NAN;
@@ -53,7 +59,8 @@ vec3 cartesian_to_polar(vec3 p) {
     } else if (x == 0 && y < 0) {
         phi = -M_PI_2;
     } else {
-        phi = NAN;
+        // phi = NAN; Final decision TBD
+        phi = 0;
     }
 
     vec3 point = {r, theta, phi, p.face};
@@ -62,35 +69,71 @@ vec3 cartesian_to_polar(vec3 p) {
 }
 
 vec3 polar_to_cartesian(vec3 p) {
-    if (!p.face) {
-        return p;
-    }
-
     float r = p.v1;
     float theta = p.v2;
     float phi = p.v3;
 
-    float x = r * sin(theta) * cos(phi);
-    float y = r * sin(theta) * sin(phi);
-    float z = r * cos(theta);
+    float x, y, z;
+
+    x = r * sin(theta) * cos(phi);
+    y = r * sin(theta) * sin(phi);
+    z = r * cos(theta);
 
     vec3 point = {x, y, z, p.face};
 
     return point;
 }
 
+void clear_display_points(vec3* display_points) {
+    for (int i = 0; i < N_DISPLAY; i++) {
+        display_points[i] = (vec3){0.0f, 0.0f, 0.0f, 0};
+    }
+}
+
+void render_display_points(vec3* cartesian_points, vec3* display_points) {
+    for (int i = 0; i < N; i++) {
+        int x = cartesian_points[i].v1;
+        int y = cartesian_points[i].v2;
+        int z = cartesian_points[i].v3;
+
+        int idx = (MID_ROW + z) * ROWS_DISPLAY + (MID_COL + y);
+
+        if (!display_points[idx].face) {
+            display_points[idx] = cartesian_points[i];
+        } else if (x > display_points[idx].v1) {
+            // This 'closer to you' function needs to become matrix projection
+            display_points[idx] = cartesian_points[i];
+        }
+    }
+}
+
+void print_cube(vec3* display_points) {
+    for (int i = 0; i < N_DISPLAY; i++) {
+        if (display_points[i].face) {
+            if (display_points[i].face == 1) {
+                printf("\033[0;31m1 \033[0m");
+            } else if (display_points[i].face == 2) {
+                printf("\033[0;32m2 \033[0m");
+            } else if (display_points[i].face == 3) {
+                printf("\033[0;33m3 \033[0m");
+            } else if (display_points[i].face == 4) {
+                printf("\033[0;34m4 \033[0m");
+            } else if (display_points[i].face == 5) {
+                printf("\033[0;35m5 \033[0m");
+            } else {
+                printf("\033[0;36m6 \033[0;0m");
+            }
+        } else {
+            printf("  ");
+        }
+
+        if (i % ROWS_DISPLAY == ROWS_DISPLAY - 1) {
+            printf("\n");
+        }
+    }
+}
+
 int main(void) {
-    const int S = 33;
-    const int S_2 = S / 2;
-    const int N = 6 * S * S;
-
-    const int ROWS_DISPLAY = 50;
-    const int COLS_DISPLAY = 170;
-    const int N_DISPLAY = ROWS_DISPLAY * COLS_DISPLAY;
-
-    const int MID_ROW = ROWS_DISPLAY / 2;
-    const int MID_COL = COLS_DISPLAY / 2;
-
     vec3* cartesian_points = malloc(N * sizeof(vec3));
     vec3* polar_points = malloc(N * sizeof(vec3));
     vec3* display_points = malloc(N_DISPLAY * sizeof(vec3));
@@ -121,51 +164,28 @@ int main(void) {
 
     for (int i = 0; i < N; i++) {
         polar_points[i] = cartesian_to_polar(cartesian_points[i]);
+        print_vec(cartesian_points[i]);
+        print_vec(polar_points[i]);
+        printf("\n");
     }
 
-    for (int i = 0; i < N_DISPLAY; i++) {
-        display_points[i] = (vec3){0.0, 0.0, 0.0, 0};
-    }
+    while (1) {
+        render_display_points(cartesian_points, display_points);
+        print_cube(display_points);
+        clear_display_points(display_points);
 
-    for (int i = 0; i < N; i++) {
-        int y = cartesian_points[i].v2;
-        int z = cartesian_points[i].v3;
-
-        int idx = (MID_ROW + z) * ROWS_DISPLAY + (MID_COL + y);
-
-        if (!display_points[idx].face) {
-            display_points[idx] = cartesian_points[i];
-        } else if (cartesian_points[i].v1 > display_points[idx].v1) {
-            display_points[idx] = cartesian_points[i];
-        }
-    }
-
-    for (int i = 0; i < N_DISPLAY; i++) {
-        if (display_points[i].face) {
-            if (display_points[i].face == 1) {
-                printf("@ ");
-            } else if (display_points[i].face == 2) {
-                printf("# ");
-            } else if (display_points[i].face == 3) {
-                printf("$ ");
-            } else if (display_points[i].face == 4) {
-                printf("%% ");
-            } else if (display_points[i].face == 5) {
-                printf("? ");
-            } else {
-                printf("& ");
-            }
-        } else {
-            printf("  ");
+        for (int i = 0; i < N; i++) {
+            polar_points[i].v3 += M_PI_4 / 3;
+            cartesian_points[i] = polar_to_cartesian(polar_points[i]);
         }
 
-        if (i % ROWS_DISPLAY == ROWS_DISPLAY - 1) {
-            printf("\n");
-        }
+        usleep(500000);
+        system("clear");
     }
 
     free(cartesian_points);
     free(polar_points);
+    free(display_points);
 
     return 0;
 }
