@@ -26,7 +26,7 @@ void print_vec(vec3 p) {
     printf("(%.2f, %.2f, %.2f, %d)\n", p.v1, p.v2, p.v3, p.face);
 }
 
-vec3 cartesian_to_polar(vec3 p) {
+vec3 cartesian_to_spherical(vec3 p) {
     float x = p.v1;
     float x_2 = x * x;
     float y = p.v2;
@@ -68,7 +68,7 @@ vec3 cartesian_to_polar(vec3 p) {
     return point;
 }
 
-vec3 polar_to_cartesian(vec3 p) {
+vec3 spherical_to_cartesian(vec3 p) {
     float r = p.v1;
     float theta = p.v2;
     float phi = p.v3;
@@ -92,9 +92,9 @@ void clear_display_points(vec3* display_points) {
 
 void render_display_points(vec3* cartesian_points, vec3* display_points) {
     for (int i = 0; i < N; i++) {
-        int x = cartesian_points[i].v1;
-        int y = cartesian_points[i].v2;
-        int z = cartesian_points[i].v3;
+        float x = cartesian_points[i].v1;
+        float y = cartesian_points[i].v2;
+        float z = cartesian_points[i].v3;
 
         int idx = (MID_ROW + z) * ROWS_DISPLAY + (MID_COL + y);
 
@@ -135,7 +135,7 @@ void print_cube(vec3* display_points) {
 
 int main(void) {
     vec3* cartesian_points = malloc(N * sizeof(vec3));
-    vec3* polar_points = malloc(N * sizeof(vec3));
+    vec3* spherical_points = malloc(N * sizeof(vec3));
     vec3* display_points = malloc(N_DISPLAY * sizeof(vec3));
 
     int c = 0;
@@ -162,12 +162,12 @@ int main(void) {
         }
     }
 
+    // Setting initial angle
     for (int i = 0; i < N; i++) {
-        polar_points[i] = cartesian_to_polar(cartesian_points[i]);
-        print_vec(cartesian_points[i]);
-        print_vec(polar_points[i]);
-        printf("\n");
+        spherical_points[i] = cartesian_to_spherical(cartesian_points[i]);
     }
+
+    int millis = 50;
 
     while (1) {
         render_display_points(cartesian_points, display_points);
@@ -175,16 +175,17 @@ int main(void) {
         clear_display_points(display_points);
 
         for (int i = 0; i < N; i++) {
-            polar_points[i].v2 += M_PI_4 / 3;
-            cartesian_points[i] = polar_to_cartesian(polar_points[i]);
+            spherical_points[i].v2 += 0.05;
+            // spherical_points[i].v3 += 0.05;
+            cartesian_points[i] = spherical_to_cartesian(spherical_points[i]);
         }
 
-        usleep(500000);
+        usleep(millis * 1000);
         system("clear");
     }
 
     free(cartesian_points);
-    free(polar_points);
+    free(spherical_points);
     free(display_points);
 
     return 0;
