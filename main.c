@@ -7,68 +7,161 @@ typedef struct {
     float v1;
     float v2;
     float v3;
+    int face;  // 0 for empty [1, 6] for faces
 } vec3;
 
-typedef struct {
-    float x;
-    float y;
-} vec2;
+void print_vec(vec3 p) {
+    printf("(%.2f, %.2f, %.2f, %d)\n", p.v1, p.v2, p.v3, p.face);
+}
 
 vec3 cartesian_to_polar(vec3 p) {
-    float r = sqrt(p.v1 * p.v1 + p.v2 * p.v2 + p.v3 * p.v3);
-    float theta = acos(p.v3 / r);
-
-    int sgn_y;
-    if (p.v2 > 0) {
-        sgn_y = 1;
-    } else if (p.v2 < 0) {
-        sgn_y = -1;
-    } else {
-        sgn_y = 0;
+    if (!p.face) {
+        return p;
     }
-    float phi = sgn_y * acos(p.v1 / (sqrt(p.v1 * p.v1 + p.v2 * p.v2)));
 
-    vec3 point = {r, theta, phi};
+    float x = p.v1;
+    float x_2 = x * x;
+    float y = p.v2;
+    float y_2 = y * y;
+    float z = p.v3;
+    float z_2 = z * z;
+
+    float r;
+    float theta;
+    float phi;
+
+    r = sqrt(x_2 + y_2 + z_2);
+
+    if (z > 0) {
+        theta = atan(sqrt(x_2 + y_2) / z);
+    } else if (z < 0) {
+        theta = M_PI + atan(sqrt(x_2 + y_2) / z);
+    } else if (x * y != 0) {
+        theta = M_PI_2;
+    } else {
+        theta = NAN;
+    }
+
+    if (x > 0) {
+        phi = atan(y / x);
+    } else if (x < 0 && y >= 0) {
+        phi = atan(y / x) + M_PI;
+    } else if (x < 0 && y < 0) {
+        phi = atan(y / x) - M_PI;
+    } else if (x == 0 && y > 0) {
+        phi = M_PI_2;
+    } else if (x == 0 && y < 0) {
+        phi = -M_PI_2;
+    } else {
+        phi = NAN;
+    }
+
+    vec3 point = {r, theta, phi, p.face};
 
     return point;
 }
 
 vec3 polar_to_cartesian(vec3 p) {
-    float temp = p.v1 * sin(p.v2);
+    if (!p.face) {
+        return p;
+    }
 
-    float x = temp * cos(p.v3);
-    float y = temp * sin(p.v3);
-    float z = p.v1 * cos(p.v2);
+    float r = p.v1;
+    float theta = p.v2;
+    float phi = p.v3;
 
-    vec3 point = {x, y, z};
+    float x = r * sin(theta) * cos(phi);
+    float y = r * sin(theta) * sin(phi);
+    float z = r * cos(theta);
+
+    vec3 point = {x, y, z, p.face};
 
     return point;
 }
 
 int main(void) {
-    const int N = 11 * 11 * 11;
+    const int S = 33;
+    const int S_2 = S / 2;
+    const int N = 6 * S * S;
+
+    const int ROWS_DISPLAY = 50;
+    const int COLS_DISPLAY = 170;
+    const int N_DISPLAY = ROWS_DISPLAY * COLS_DISPLAY;
+
+    const int MID_ROW = ROWS_DISPLAY / 2;
+    const int MID_COL = COLS_DISPLAY / 2;
 
     vec3* cartesian_points = malloc(N * sizeof(vec3));
     vec3* polar_points = malloc(N * sizeof(vec3));
+    vec3* display_points = malloc(N_DISPLAY * sizeof(vec3));
 
     int c = 0;
-    for (int x = -5; x <= 5; x++) {
-        for (int y = -5; y <= 5; y++) {
-            for (int z = -5; z <= 5; z++) {
-                cartesian_points[c].v1 = x;
-                cartesian_points[c].v2 = y;
-                cartesian_points[c].v3 = z;
-                c++;
-            }
+
+    for (int i = -S_2 + 1; i < S_2; i++) {
+        for (int j = -S_2 + 1; j < S_2; j++) {
+            cartesian_points[c] = (vec3){i, j, S_2, 1};
+            c++;
+
+            cartesian_points[c] = (vec3){i, j, -S_2, 2};
+            c++;
+
+            cartesian_points[c] = (vec3){i, S_2, j, 3};
+            c++;
+
+            cartesian_points[c] = (vec3){i, -S_2, j, 4};
+            c++;
+
+            cartesian_points[c] = (vec3){S_2, i, j, 5};
+            c++;
+
+            cartesian_points[c] = (vec3){-S_2, i, j, 6};
+            c++;
         }
     }
 
     for (int i = 0; i < N; i++) {
         polar_points[i] = cartesian_to_polar(cartesian_points[i]);
-        printf("(%.3f, %.3f, %.3f)\n", polar_points[i].v1, polar_points[i].v2,
-               polar_points[i].v3);
-        printf("(%.3f, %.3f, %.3f)\n", cartesian_points[i].v1,
-               cartesian_points[i].v2, cartesian_points[i].v3);
+    }
+
+    for (int i = 0; i < N_DISPLAY; i++) {
+        display_points[i] = (vec3){0.0, 0.0, 0.0, 0};
+    }
+
+    for (int i = 0; i < N; i++) {
+        int y = cartesian_points[i].v2;
+        int z = cartesian_points[i].v3;
+
+        int idx = (MID_ROW + z) * ROWS_DISPLAY + (MID_COL + y);
+
+        if (!display_points[idx].face) {
+            display_points[idx] = cartesian_points[i];
+        } else if (cartesian_points[i].v1 > display_points[idx].v1) {
+            display_points[idx] = cartesian_points[i];
+        }
+    }
+
+    for (int i = 0; i < N_DISPLAY; i++) {
+        if (display_points[i].face) {
+            if (display_points[i].face == 1) {
+                printf("@ ");
+            } else if (display_points[i].face == 2) {
+                printf("# ");
+            } else if (display_points[i].face == 3) {
+                printf("$ ");
+            } else if (display_points[i].face == 4) {
+                printf("%% ");
+            } else if (display_points[i].face == 5) {
+                printf("? ");
+            } else {
+                printf("& ");
+            }
+        } else {
+            printf("  ");
+        }
+
+        if (i % ROWS_DISPLAY == ROWS_DISPLAY - 1) {
+            printf("\n");
+        }
     }
 
     free(cartesian_points);
